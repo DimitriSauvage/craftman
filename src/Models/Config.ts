@@ -1,5 +1,5 @@
 import { Template } from "./Template";
-import Helper from "./Helper";
+import HelperDefinition from "./Helper";
 
 /**
  * Craftsman configuration
@@ -12,5 +12,5 @@ export default interface Config {
     /**
      * Available helpers
      */
-    helpers?: Helper[];
+    helpers?: HelperDefinition[];
 }

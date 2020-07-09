@@ -1,20 +1,29 @@
-const chalk = require("chalk");
-const utils = require("./utils");
-const execCondition = require("../condition");
-const { ERRORS_NAMES } = require("../errors");
-const { applyVariables } = require("../Generator");
+import Variable from "../Models/Variable";
+
+interface QuestionConfig {
+    name: string;
+    message: string;
+    type: string;
+    choices?: string[];
+    source?: (_: any, search: string) => Promise<string[]>;
+}
 
 /**
  * Get default config of a question
- * @param {object} variable
+ * @param {Variable} variable Variable for which get the default value
  */
-const getDefaultConfig = (variable) => ({
-    name: variable.name,
-    message:
-        variable.message !== undefined
-            ? variable.message
-            : `What ${variable.name} ?`,
-});
+const getDefaultVariableConfig = async (
+    variable: Variable
+): Promise<QuestionConfig> =>
+    new Promise((resolve) => {
+        resolve({
+            name: variable.name,
+            message: variable.message
+                ? variable.message
+                : `What is the value for ${variable.name} ?`,
+            type: "input",
+        });
+    });
 
 /**
  * Get config for the select question of a file or a directory
@@ -22,15 +31,15 @@ const getDefaultConfig = (variable) => ({
  * @param {"file" | "directory"} type
  */
 const getFileConfig = (variable, type) => ({
-    ...getDefaultConfig(variable),
+    ...getDefaultVariableConfig(variable),
     type: "autocomplete",
     source: (_, fileName) =>
         new Promise((resolve) => {
             const initialPath = variable.path || ".";
             const list =
                 type === "file"
-                    ? utils.getFiles(initialPath)
-                    : utils.getDirectories(initialPath);
+                    ? getFiles(initialPath)
+                    : getDirectories(initialPath);
 
             resolve(
                 list
@@ -58,13 +67,43 @@ const getFileConfig = (variable, type) => ({
         }),
 });
 
+const getQuestionConfig = async (variable: Variable): Promise<void> => {
+    let config: QuestionConfig = await getDefaultVariableConfig(variable);
+    switch (variable.type) {
+        case "text":
+            break;
+        case "array":
+            break;
+        case "file":
+            break;
+        case "choices":
+            config.type = "list";
+            config.choices = variable.choices;
+            break;
+        case "autocomplete":
+            config.type = "autocomplete";
+            config.source = (_, search) => {
+                const searchRegex = new RegExp(search, "i");
+                return new Promise((resolve, reject) =>
+                    resolve(
+                        variable.choices.filter(
+                            (choice) => choice.search(searchRegex) !== -1
+                        )
+                    )
+                );
+            },
+            break;
+        case "directory":
+            break;
+    }
+};
 const questionsConfig = {
     /**
      * Get config for a text question
      * @param {object} variable
      */
     text: (variable) => ({
-        ...getDefaultConfig(variable),
+        ...getDefaultVariableConfig(variable),
         type: "input",
     }),
 
@@ -73,7 +112,7 @@ const questionsConfig = {
      * @param {object} variable
      */
     choices: (variable) => ({
-        ...getDefaultConfig(variable),
+        ...getDefaultVariableConfig(variable),
         type: "list",
         choices: variable.choices,
     }),
@@ -83,7 +122,7 @@ const questionsConfig = {
      * @param {object} variable
      */
     autocomplete: (variable) => ({
-        ...getDefaultConfig(variable),
+        ...getDefaultVariableConfig(variable),
         type: "autocomplete",
         source: (_, search) => {
             const searchRegex = new RegExp(search, "i");
@@ -124,7 +163,7 @@ const ask = async (variables, prefixMessage) => {
         if (variable.type === "array") {
             if (variable.message) {
                 console.log(
-                    `${chalk.bold(
+                    `${bold(
                         `\n${applyVariables(
                             responses,
                             variable.message,
@@ -191,9 +230,9 @@ const ask = async (variables, prefixMessage) => {
             let response;
             if (variable.condition) {
                 response = execCondition(variable.condition, responses)
-                    ? await utils.safePrompt(question)
+                    ? await safePrompt(question)
                     : { [question.name]: "" };
-            } else response = await utils.safePrompt(question);
+            } else response = await safePrompt(question);
 
             responses = { ...responses, ...response };
         }
@@ -201,4 +240,4 @@ const ask = async (variables, prefixMessage) => {
     return responses;
 };
 
-module.exports = ask;
+export default ask;

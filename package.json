@@ -1,40 +1,45 @@
 {
-  "name": "@augustindlt/craftsman",
-  "version": "2.0.3",
-  "description": "Generate templates for your code !",
-  "main": "index.js",
-  "scripts": {
-    "start": "nodemon",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "CLI"
-  ],
-  "author": "Augustin de Latrollière",
-  "bin": {
-    "craft": "index.js"
-  },
-  "dependencies": {
-    "chalk": "^2.3.0",
-    "clear": "0.0.1",
-    "ejs": "^3.0.1",
-    "figlet": "^1.2.0",
-    "inquirer": "^5.0.1",
-    "inquirer-autocomplete-prompt": "^1.0.1"
-  },
-  "devDependencies": {
-    "@types/node": "^14.0.19",
-    "nodemon": "^2.0.4",
-    "ts-node": "^8.10.2",
-    "typescript": "^3.9.6"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@github.com/augustindlt/craftman.git"
-  },
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/augustindlt/craftman/issues"
-  },
-  "homepage": "https://github.com/augustindlt/craftman#readme"
+    "name": "@augustindlt/craftsman",
+    "version": "2.0.3",
+    "description": "Generate templates for your code !",
+    "main": "src/index.ts",
+    "scripts": {
+        "start": "nodemon",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "CLI"
+    ],
+    "author": "Augustin de Latrollière - Dimitri SAUVAGE",
+    "bin": {
+        "craft": "index.js"
+    },
+    "dependencies": {
+        "chalk": "^2.3.0",
+        "clear": "0.0.1",
+        "ejs": "^3.0.1",
+        "figlet": "^1.2.0",
+        "inquirer": "^7.0.3",
+        "inquirer-autocomplete-prompt": "^1.0.2"
+    },
+    "devDependencies": {
+        "@types/node": "^14.0.19",
+        "@types/chalk": "^2.2.0",
+        "@types/clear": "^0.1.0",
+        "@types/ejs": "^3.0.4",
+        "@types/figlet": "^1.2.0",
+        "@types/inquirer": "^6.5.0",
+        "nodemon": "^2.0.4",
+        "ts-node": "^8.10.2",
+        "typescript": "^3.9.6"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+ssh://git@github.com/dsauvage/craftman-ts.git"
+    },
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/dsauvage/craftman-ts/issues"
+    },
+    "homepage": "https://github.com/dsauvage/craftman-ts#readme"
 }
