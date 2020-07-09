@@ -5,7 +5,7 @@ import path from "path";
  * Get all files in a directory
  * @param directory Directory where search for files
  */
-export const getFiles = async (directory: string): Promise<string[]> => {
+export const getFilesAsync = async (directory: string): Promise<string[]> => {
     if (!fs.existsSync(directory)) return [];
     const result: string[] = [];
 
@@ -16,7 +16,7 @@ export const getFiles = async (directory: string): Promise<string[]> => {
         const name = directory + path.sep + file;
         if (fs.statSync(name).isDirectory()) {
             //Get subdirectory files
-            result.push(...(await getFiles(name)));
+            result.push(...(await getFilesAsync(name)));
         } else {
             result.push(name);
         }
@@ -28,7 +28,9 @@ export const getFiles = async (directory: string): Promise<string[]> => {
  * Get all directories and subdirectories
  * @param directory Directory where search
  */
-export const getDirectories = async (directory: string): Promise<string[]> => {
+export const getDirectoriesAsync = async (
+    directory: string
+): Promise<string[]> => {
     if (!fs.existsSync(directory)) return [];
 
     const result: string[] = [];
@@ -38,7 +40,7 @@ export const getDirectories = async (directory: string): Promise<string[]> => {
         .filter((x: string) => fs.statSync(x).isDirectory())
         .forEach(async (subDir: string) => {
             result.push(subDir);
-            result.push(...(await getDirectories(subDir)));
+            result.push(...(await getDirectoriesAsync(subDir)));
         });
     return result;
 };

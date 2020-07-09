@@ -1,71 +1,75 @@
 import fs from "fs";
 import chalk from "chalk";
-import ejs from "ejs";
 import { CRAFTSMAN_FOLDER, TEMPLATE_EXT } from "../constants";
+import File, { ReplaceExistingFileEnum } from "../Models/File";
+import path from "path";
+import { askQuestionAsync } from "../Config/QuestionManager";
+import { Question } from "../Models/Question";
+import { Template } from "../Models/Template";
+import TemplateNotFoundError from "../Errors/TemplateNotFoundError";
+import Variable from "../Models/Variable";
+import { applyVariablesAsync } from "../Config/Utils/VariableUtils";
 
 /**
  * Create a file
- * @param {string} path
- * @param {string} fileName
- * @param {string} content
- * @param {"yes"|"no"|"ask"|undefined} replaceExistingFile
+ * @param {string} filePath Path of the created file
+ * @param {string} fileName Name of the created file
+ * @param {string} content Content of the created file
+ * @param {ReplaceExistingFileEnum} replaceExistingFile Action when the file already exists
  */
-const createFile = async (path, fileName, content, replaceExistingFile) => {
-    const filePath = `${path}/${fileName}`;
+const createFileAsync = async (
+    filePath: string,
+    fileName: string,
+    content: string,
+    replaceExistingFile: ReplaceExistingFileEnum
+) => {
+    //Check if the file exists
+    const completeFilePath = `${filePath}${path.sep}${fileName}`;
     if (fs.existsSync(filePath)) {
-        if (replaceExistingFile !== "yes") {
+        if (replaceExistingFile === "no") {
             console.log(
                 "\n=> " +
                     chalk.blue(filePath) +
                     chalk.red(" already exist ! 😇")
             );
-        }
-
-        if (replaceExistingFile === "no") {
             return;
-        }
+        } else {
+            //Ask to the user if he wants to remove the file
+            if (
+                replaceExistingFile === "ask" &&
+                (await askQuestionAsync({
+                    answerName: "replaceExistingFile",
+                    message: `The file ${completeFilePath} already exists. Do you want to replace it ?`,
+                    type: "confirm",
+                } as Question<boolean>))
+            ) {
+                fs.unlinkSync(completeFilePath);
+            } else {
+                return;
+            }
 
-        if (replaceExistingFile !== "yes") {
-            const ask = require("../Config/ask");
-            const { replaceIt } = await ask({
-                replaceIt: {
-                    type: "choices",
-                    choices: ["no", "yes"],
-                    message: "Do you want to replace it ?",
-                },
-            });
-            if (replaceIt === "no") return;
+            //Create the file
+            fs.mkdirSync(completeFilePath, { recursive: true });
+            fs.writeFileSync(completeFilePath, content);
+            console.log(
+                "=> " + chalk.blue(completeFilePath) + chalk.yellow(" Done ! 🥳")
+            );
         }
-    }
-    fs.mkdirSync(path, { recursive: true });
-    fs.writeFileSync(filePath, content);
-    console.log("=> " + chalk.blue(filePath) + chalk.yellow(" Done ! 🥳"));
 };
 
-/**
- * Apply variables to a string
- * @param {object} variables
- * @param {string} content
- * @param {string} scope
- */
-const applyVariables = (variables, content, scope) => {
-    try {
-        return ejs.render(content, variables);
-    } catch (e) {
-        throw new TemplateParserError(scope, e.message);
-    }
-};
 
 /**
  * Get the content of a template file
- * @param {string} templateName
+ * @param {string} template Template
  */
-const getTemplateContent = (templateName) => {
-    const templatePath = `${CRAFTSMAN_FOLDER}/${templateName}.${TEMPLATE_EXT}`;
+const getTemplateContentAsync = async (template: Template): Promise<string> => {
+   return new Promise((resolve) => {
+    const templatePath = `${CRAFTSMAN_FOLDER}${path.sep}${template.name}.${TEMPLATE_EXT}`;
     if (!fs.existsSync(templatePath)) {
-        throw new TemplateNotFoundError(templateName);
+        throw new TemplateNotFoundError(template.name);
     }
-    return fs.readFileSync(templatePath).toString();
+    resolve(fs.readFileSync(templatePath).toString());
+   })
 };
 
 /**
@@ -76,19 +80,17 @@ const getTemplateContent = (templateName) => {
  * @param {"yes"|"no"|"ask"|undefined} replaceExistingFile
  * @param {object} variables
  */
-const generateFile = async (
-    templateName,
-    filePath,
-    fileName,
-    replaceExistingFile,
-    variables
+const generateFileAsync = async (
+    template: Template,
+    file: File,
+    replaceExistingFile: ReplaceExistingFileEnum,
+    variables: Variable[]
 ) => {
-    filePath = applyVariables(variables, filePath, "file path");
-    fileName = applyVariables(variables, fileName, "file name");
-    templateName = applyVariables(variables, templateName, "template name");
-    let content = getTemplateContent(templateName);
-    content = applyVariables(variables, content, "content");
-    await createFile(filePath, fileName, content, replaceExistingFile);
+    const filePath = file.path ? await applyVariablesAsync(variables, file.path, "File path", "replacement") : "./";
+    const fileName = await applyVariablesAsync(variables, file.name, "File name", "replacement");
+    const templateName = await applyVariablesAsync(variables, template.name, "Template name", "replacement");
+    let content = await getTemplateContentAsync(template);
+    content = await applyVariablesAsync(variables, content, "Templaten content","ejs");
+    content = await applyVariablesAsync(variables, content, "Templaten content","replacement");
+    await createFileAsync(filePath, fileName, content, replaceExistingFile);
 };
-
-module.exports = { applyVariables, generateFile };

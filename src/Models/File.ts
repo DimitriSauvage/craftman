@@ -1,3 +1,6 @@
+/**Available values to know what we have to do when a file already exists */
+export type ReplaceExistingFileEnum = "yes" | "no" | "ask";
+
 /**
  * File to generate
  */
@@ -18,7 +21,7 @@ export default interface File {
     /**
      * If the CLI should replace the file or not if it already exists, by default this parameter by default this parameter is set to "ask"
      */
-    replaceExistingFile?: "yes" | "no" | "ask";
+    replaceExistingFile?: ReplaceExistingFileEnum;
     /**
      * To condition to met to generate the file
      */
