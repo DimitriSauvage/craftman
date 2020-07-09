@@ -1,34 +1,49 @@
-import inquirer, { Answers } from "inquirer";
-import observe from "inquirer/lib/utils/events";
+import prompts from "prompts";
+import { Question } from "../../Models/Question";
 
 /**
- * Handle esc press inquirer
+ * Ask a question with the availability to cancel
+ * @param question Question to answer
  */
-export const safePrompt = async (question) => {
-    //Get prompt module and configure it
-    const promptModule = inquirer.createPromptModule();
-    promptModule.registerPrompt(
-        "autocomplete",
-        require("inquirer-autocomplete-prompt")
+export const safePromptAsync = async <TAnswer>(
+    question: Question<TAnswer>
+): Promise<TAnswer> => {
+    const result = await prompts(
+        await mapQuestionToPrompsObjectAsync(question as Question<TAnswer>)
     );
 
-    //Instance of the prompt
-    const ui = new inquirer.ui.Prompt(promptModule.prompts);
-    const events = observe(ui.rl);
-    return new Promise(async (resolve, reject) => {
-        const keySubscription = events.keypress.subscribe((e) => {
-            if (e.key.name === "escape") {
-                reject(new CancelEditionError());
-                ui.close();
-            }
-        });
-
-        try {
-            const responses: Answers = await ui.run([question]);
-            keySubscription.unsubscribe();
-            resolve(responses);
-        } catch (e) {
-            reject(e);
-        }
-    });
+    //Return the answer because we have just one question
+    return result[question.answerName] as TAnswer;
 };
+
+/**
+ * Ask multiple questions
+ * @param questions Questions to answer
+ */
+export const safePromptsAsync = async <TAnswer>(
+    questions: Array<Question<TAnswer>>
+): Promise<{ [key: string]: TAnswer }> => {
+    const questionsArray = questions as Array<Question<TAnswer>>;
+    const promptObjectArray = await Promise.all(
+        questionsArray.map(async (question) =>
+            mapQuestionToPrompsObjectAsync(question)
+        )
+    );
+    return await prompts(promptObjectArray);
+};
+
+/**
+ * Map a question to a prompt object
+ * @param question Question to map
+ */
+const mapQuestionToPrompsObjectAsync = async <TAnswer>(
+    question: Question<TAnswer>
+): Promise<prompts.PromptObject> =>
+    new Promise<prompts.PromptObject>((resolve) => {
+        resolve({
+            name: question.answerName,
+            type: question.type || "text",
+            choices: question.choices,
+            message: question.message,
+        });
+    });

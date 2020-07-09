@@ -19,4 +19,8 @@ export default interface File {
      * If the CLI should replace the file or not if it already exists, by default this parameter by default this parameter is set to "ask"
      */
     replaceExistingFile?: "yes" | "no" | "ask";
+    /**
+     * To condition to met to generate the file
+     */
+    condition?: string;
 }

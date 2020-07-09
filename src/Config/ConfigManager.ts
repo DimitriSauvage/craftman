@@ -10,7 +10,8 @@ import HelperDefinition, {
     HelperFunction,
 } from "../Models/Helper";
 import { Template } from "../Models/Template";
-import { validateTemplate } from "./TemplateManager";
+import { validateTemplateAsync } from "./TemplateManager";
+import { includedHelpers } from "./includedHelpers";
 const ask = require("./ask").default;
 
 /**Authorized helper extension */
@@ -19,7 +20,7 @@ const helperExtension = ".js";
 /**
  * Get the configuration
  */
-export const getConfig = async (): Promise<Config> => {
+export const getConfigAsync = async (): Promise<Config> => {
     //Check if the config file exists
     if (!fs.existsSync(CONFIG_PATH)) throw new ConfigNotFoundError();
 
@@ -49,7 +50,7 @@ export const getConfig = async (): Promise<Config> => {
     //Check templates content
     const templates: Template[] = [];
     for (const template of config.templates) {
-        templates.push(await validateTemplate(template));
+        templates.push(await validateTemplateAsync(template));
     }
     config.templates = templates;
 
@@ -96,7 +97,7 @@ export const getConfig = async (): Promise<Config> => {
                 );
             }
 
-            //Get the function is needed
+            //Get the function
             if (!(helperDefinition as HelperFunction).function) {
                 const helperFunction: Function = await import(helperPath);
                 if (typeof helperFunction !== "function") {
@@ -108,10 +109,11 @@ export const getConfig = async (): Promise<Config> => {
             }
 
             helpers.push(helper);
+            helpers.push(...includedHelpers);
         });
 
         //Set helpers with function
-        config.helpers = helpers;
+        config.helpers = helpers.concat();
     }
 
     return config;

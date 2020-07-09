@@ -2,10 +2,16 @@ import chalk from "chalk";
 import clear from "clear";
 import figlet from "figlet";
 import handleError from "./Errors/errorHandler";
-import { getConfig } from "./Config/ConfigManager";
+import { getConfigAsync } from "./Config/ConfigManager";
 import Config from "./Models/Config";
+import { getTemplateToUseAsync } from "./Config/TemplateManager";
+import {
+    getVariableValuesAsync,
+    applyVariablesAsync,
+} from "./Config/Utils/VariableUtils";
+import { conditionRespectedAsync } from "./Config/Utils/ConditionUtils";
 
-const craftsmanExecution = async (): Promise<void> => {
+const craftsmanExecutionAsync = async (): Promise<void> => {
     try {
         //Clear the console when starting Craftsman
         clear();
@@ -14,25 +20,36 @@ const craftsmanExecution = async (): Promise<void> => {
         console.log(chalk.yellow(figlet.textSync("craftsman", {})));
 
         //Load configuration
-        const config: Config = await getConfig();
+        const config: Config = await getConfigAsync();
 
         //Ask for template choice
-        await getTemplateToUse();
-        await askForTemplate();
+        const template = await getTemplateToUseAsync(config.templates);
 
         //Ask for variables values
-        await askForVariables();
+        if (template.variables && template.variables.length > 0)
+            template.variables = await getVariableValuesAsync(
+                template.variables
+            );
 
         console.log("\n");
 
         //File generation
-        for (const file of currentTemplate.files) {
+        for (const file of template.files) {
+            //Check condition
+            let canGenerate = true;
+            if (file.condition) {
+                const condition = template.variables
+                    ? await applyVariablesAsync(
+                          template.variables,
+                          file.condition,
+                          "File condition",
+                          "replacement"
+                      )
+                    : file.condition;
+                canGenerate = await conditionRespectedAsync(file.condition);
+            }
             //Check if the condition are checked
-            if (
-                !file.condition ||
-                (file.condition &&
-                    execCondition(file.condition, currentVariables))
-            ) {
+            if (canGenerate) {
                 await generateFile(
                     file.template,
                     file.path,

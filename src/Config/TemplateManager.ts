@@ -1,13 +1,15 @@
 import { Template } from "../Models/Template";
 import ConfigValidationError from "../Errors/ConfigValidationError";
 import File from "../Models/File";
-import { validateFile } from "./FileManager";
+import { validateFileAsync } from "./FileManager";
+import { askQuestionAsync } from "./QuestionManager";
+import { QuestionChoice } from "../Models/Question";
 
 /**
  * Validate a template
  * @param templateToValidate Template to validate
  */
-export const validateTemplate = async (
+export const validateTemplateAsync = async (
     templateToValidate: Template
 ): Promise<Template> => {
     //Make copy of the template
@@ -33,7 +35,7 @@ export const validateTemplate = async (
     //Check files
     const files: File[] = [];
     for (const file of template.files) {
-        files.push(await validateFile(file));
+        files.push(await validateFileAsync(file));
     }
     template.files = files;
 
@@ -47,25 +49,34 @@ export const validateTemplate = async (
  * Get the template to use
  * @param templates Available templates
  */
-export const getTemplateToUse = async (templates: Template[]) => {
+export const getTemplateToUseAsync = async (templates: Template[]) => {
+    const answerName = "templateToUse";
     let result: Template;
 
     //If only one template, do not ask
     if (templates.length === 1) {
         result = templates[0];
-        return;
-    }
-    const { name } = await ask({
-        name: {
-            message: "What do you want to generate ?",
-            type: "choices",
-            choices: templates.map((template) => template.name),
-        },
-    });
-    currentTemplate = templates.find((template) => template.name === name);
-    if (currentTemplate.files.length < 1) {
-        throw new ConfigValidationError(
-            "Add at least one file to your template"
+    } else {
+        //Create choices for templates
+        const availableChoices: QuestionChoice<Template>[] = templates.map(
+            (template: Template, index: number) => {
+                return {
+                    title: template.name,
+                    value: template,
+                    description: template.name,
+                    selected: index == 0,
+                };
+            }
         );
+
+        //Ask the question
+        result = await askQuestionAsync<Template>({
+            answerName: answerName,
+            message: "Which template do you want to use ?",
+            type: "select",
+            choices: availableChoices,
+        });
     }
+
+    return result;
 };

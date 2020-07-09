@@ -1,54 +1,95 @@
+/**Variable type */
+export type VariableType =
+    | "autocomplete"
+    | "text"
+    | "password"
+    | "invisible"
+    | "number"
+    | "confirm"
+    | "select"
+    | "date";
+
 /**
  * Definition of a variable
  */
 interface BaseVariable {
+    /**
+     * Name of the variable
+     */
     name: string;
-    type: "text" | "choices" | "autocomplete" | "file" | "directory" | "array";
+    /**
+     * Type of the variable
+     */
+    type: VariableType;
+    /**
+     * Message to display when asking the value
+     */
     message?: string;
+    /**
+     * Condition to ask
+     */
     condition?: string;
+    /**
+     * Value of the variable
+     */
+    value?: any;
 }
 
 /**
  * Definition of a variable which contains choices
  */
 interface WithValuesVariable extends BaseVariable {
-    type: "choices" | "autocomplete";
+    type: "select" | "autocomplete";
     choices: string[];
 }
 
 /**
- * File or directory variable
+ * Definition of a date variable
  */
-interface FileDirectoryVariable extends BaseVariable {
-    /**
-     * Type of the file (File or folder)
-     */
-    type: "file" | "directory";
-    /**
-     * Path where search the file or the directory
-     */
-    path?: string;
+export interface DateVariable extends BaseVariable {
+    type: "date";
 }
 
 /**
- * Definition of a text variable
+ * Definition of a confirm variable
  */
 export interface TextVariable extends BaseVariable {
     type: "text";
 }
 
 /**
- * Definition of a text variable
+ * Definition of a number variable
  */
-export interface ArrayVariable extends BaseVariable {
-    type: "array";
+export interface NumberVariable extends BaseVariable {
+    type: "number";
 }
 
 /**
- * Define a choices variable
+ * Definition of a select variable
  */
-export interface ChoicesVariable extends WithValuesVariable {
-    type: "choices";
+export interface SelectVariable extends WithValuesVariable {
+    type: "select";
+}
+
+/**
+ * Definition of a select variable
+ */
+export interface ConfirmVariable extends BaseVariable {
+    type: "confirm";
+}
+
+/**
+ * Definition of a password variable
+ */
+export interface PasswordVariable extends BaseVariable {
+    type: "password";
+}
+
+/**
+ * Definition of an invisible variable
+ */
+export interface InvisibleVariable extends BaseVariable {
+    type: "invisible";
 }
 
 /**
@@ -59,50 +100,15 @@ export interface AutocompleteVariable extends WithValuesVariable {
 }
 
 /**
- * File variable
- */
-export interface FileVariable extends FileDirectoryVariable {
-    type: "file";
-}
-
-/**
- * Directory variable
- */
-export interface DirectoryVariable extends FileDirectoryVariable {
-    type: "directory";
-}
-
-/**
- * Variable which will search in files wich contains a parameter in his name
- */
-export interface WithStringMatchFileVariable extends FileVariable {
-    /**
-     * Filter files to show only those that contains this string in their path
-     */
-    matchString: string;
-}
-
-/**
- * Variable which will search in files wich name match with the regex
- */
-export interface WithRegexMatchFileVariable extends FileVariable {
-    /**
-     * Filter files to show only those that contains this string in their path
-     */
-    matchRegex: RegExp | string;
-}
-
-/**
  * Variable type use in the waiting variable
  */
 type Variable =
-    | TextVariable
-    | ArrayVariable
-    | WithRegexMatchFileVariable
-    | WithStringMatchFileVariable
-    | ChoicesVariable
     | AutocompleteVariable
-    | FileVariable
-    | DirectoryVariable;
-
+    | TextVariable
+    | PasswordVariable
+    | InvisibleVariable
+    | NumberVariable
+    | ConfirmVariable
+    | SelectVariable
+    | DateVariable;
 export default Variable;
