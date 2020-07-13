@@ -4,13 +4,17 @@ import HelperDefinition from "./Helper";
 /**
  * Craftsman configuration
  */
-export default interface Config {
+export interface Config {
     /**
      * Available templates
      */
-    templates: Template[];
+    templates?: Template[];
     /**
      * Available helpers
      */
     helpers?: HelperDefinition[];
+    /**
+     * If we have to override global conf with the local
+     */
+    overrideGlobalConfWithLocal?: boolean;
 }

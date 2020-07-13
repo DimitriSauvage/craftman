@@ -1,2 +1,5 @@
 - FIchie de configuration global (/home/$USER)
 - Fichier de configuration local
+
+export const GLOBAL_CONFIG_PATH: string = "";
+//Supprimer l'extension du template

@@ -1,241 +1,226 @@
 import fs from "fs";
+import { homedir } from "os";
+import { sep } from "path";
 import { CONFIG_PATH, CRAFTSMAN_FOLDER } from "../constants";
 import ConfigNotFoundError from "../Errors/ConfigNotFoundError";
 import ConfigValidationError from "../Errors/ConfigValidationError";
-import Config from "../Models/public/Config";
+import { Config } from "../Models/public/Config";
+import HelperDefinition, {
+    HelperFunction,
+    HelperLongDeclaration,
+    HelperShortcutDeclaration
+} from "../Models/public/Helper";
+import { Template } from "../Models/public/Template";
 import { includedHelpers } from "./includedHelpers";
 import { validateTemplateAsync } from "./TemplateManager";
-import { Template } from "../Models/public/Template";
-import HelperDefinition, { HelperLongDeclaration, HelperFunction, HelperShortcutDeclaration } from "../Models/public/Helper";
-
-const ask = require("./ask").default;
 
 /**Authorized helper extension */
 const helperExtension = ".js";
 
-/**
- * Get the configuration
- */
 export const getConfigAsync = async (): Promise<Config> => {
-    //Check if the config file exists
-    if (!fs.existsSync(CONFIG_PATH)) throw new ConfigNotFoundError();
+    //Get global config
+    const globalConfig = await loadConfig(`${homedir()}${sep}${CONFIG_PATH}`);
 
-    //Load config
-    let config: Config;
-    try {
-        const content = await fs.promises.readFile(CONFIG_PATH, {
-            encoding: "utf-8",
-        });
-        config = JSON.parse(content);
-    } catch {
-        throw new ConfigValidationError();
-    }
+    //Get local config
+    const localConfig = await loadConfig(
+        `${process.cwd()}${sep}${CONFIG_PATH}`
+    );
 
-    //Check config content
+    //Merge configs
+    let config = await mergeConfigurationsAsync(globalConfig, localConfig);
+
+    //Check templates
+    config = await checkTemplatesAsync(config);
+
+    //Check helpers
+    config = await checkHelpersAsync(config);
+
+    return config;
+};
+
+/**
+ *
+ * @param configToCheck Configuration to check
+ * @param type Type
+ */
+const checkTemplatesAsync = async (configToCheck: Config): Promise<Config> => {
+    const config: Config = {
+        ...configToCheck,
+    };
+    //Check if the property is present
     if (
-        !config ||
-        !config.templates ||
-        config.templates.length == 0 ||
-        typeof config.templates != typeof {}
+        !configToCheck.templates ||
+        !Array.isArray(configToCheck.templates) ||
+        configToCheck.templates.length === 0
     ) {
         throw new ConfigValidationError(
-            "The config file has no template. Please add an array with at least one template"
+            "Template property is missing in the configuration, or should have at least one element"
         );
     }
 
-    //Check templates content
+    //CHeck the content
     const templates: Template[] = [];
-    for (const template of config.templates) {
-        templates.push(await validateTemplateAsync(template));
+    if (
+        configToCheck.templates &&
+        Array.isArray(configToCheck.templates) &&
+        configToCheck.templates.length > 0
+    ) {
+        //Check templates content
+        for (const template of configToCheck.templates) {
+            templates.push(await validateTemplateAsync(template));
+        }
+        config.templates = templates;
     }
-    config.templates = templates;
+    return config;
+};
 
-    //Check helpers
-    if (config.helpers) {
+/**
+ * Check the helpers content
+ * @param configToCheck Configuration to check
+ */
+const checkHelpersAsync = async (configToCheck: Config): Promise<Config> => {
+    const config: Config = {
+        ...configToCheck,
+    };
+    if (configToCheck.helpers) {
         //Result
         const helpers: HelperLongDeclaration[] = [];
 
         //Browse helpers to load functions
-        config.helpers.forEach(async (helperDefinition: HelperDefinition) => {
-            let helper: HelperFunction = helperDefinition as HelperFunction;
-            //Change short definition in long
-            if (!helper.name) {
-                const helperShortcut = helperDefinition as HelperShortcutDeclaration;
-                const objectKeys = Object.keys(helperShortcut);
-                if (objectKeys.length > 1)
-                    throw new ConfigValidationError(
-                        `Helper with keys ${objectKeys.join(
-                            " - "
-                        )} is not correct. It should have only one property.`
-                    );
-                helper.name = objectKeys[0];
-                helper.path = helperShortcut[objectKeys[0]];
-            }
+        configToCheck.helpers.forEach(
+            async (helperDefinition: HelperDefinition) => {
+                let helper: HelperFunction = helperDefinition as HelperFunction;
+                //Change short definition in long
+                if (!helper.name) {
+                    const helperShortcut = helperDefinition as HelperShortcutDeclaration;
+                    const objectKeys = Object.keys(helperShortcut);
+                    if (objectKeys.length > 1)
+                        throw new ConfigValidationError(
+                            `Helper with keys ${objectKeys.join(
+                                " - "
+                            )} is not correct. It should have only one property.`
+                        );
+                    helper.name = objectKeys[0];
+                    helper.path = helperShortcut[objectKeys[0]];
+                }
 
-            //Get the correct file path
-            let helperPath: string;
-            try {
-                let helperRelativePath =
-                    helperDefinition.path && helperDefinition.path != ""
-                        ? `${helperDefinition.path}/${helperDefinition.name}`
-                        : helperDefinition.name;
-                if (helperRelativePath.endsWith(helperExtension))
-                    helperRelativePath = helperRelativePath.replace(
-                        helperExtension,
-                        ""
+                //Get the correct file path
+                let helperPath: string;
+                try {
+                    let helperRelativePath =
+                        helperDefinition.path && helperDefinition.path != ""
+                            ? `${helperDefinition.path}/${helperDefinition.name}`
+                            : helperDefinition.name;
+                    if (helperRelativePath.endsWith(helperExtension))
+                        helperRelativePath = helperRelativePath.replace(
+                            helperExtension,
+                            ""
+                        );
+                    helperPath = fs.realpathSync(
+                        `${CRAFTSMAN_FOLDER}/${helperRelativePath}${helperExtension}`
                     );
-                helperPath = fs.realpathSync(
-                    `${CRAFTSMAN_FOLDER}/${helperRelativePath}${helperExtension}`
-                );
-            } catch {
-                throw new ConfigValidationError(
-                    `Helper ${helperDefinition.name} not found`
-                );
-            }
-
-            //Get the function
-            if (!(helperDefinition as HelperFunction).function) {
-                const helperFunction: Function = await import(helperPath);
-                if (typeof helperFunction !== "function") {
+                } catch {
                     throw new ConfigValidationError(
-                        `Make sure the ${helperDefinition.name} helper is an exported function `
+                        `Helper ${helperDefinition.name} not found`
                     );
                 }
-                helper.function = helperFunction;
-            }
 
-            helpers.push(helper);
-            helpers.push(...includedHelpers);
-        });
+                //Get the function
+                if (!(helperDefinition as HelperFunction).function) {
+                    const helperFunction: Function = await import(helperPath);
+                    if (typeof helperFunction !== "function") {
+                        throw new ConfigValidationError(
+                            `Make sure the ${helperDefinition.name} helper is an exported function `
+                        );
+                    }
+                    helper.function = helperFunction;
+                }
+
+                helpers.push(helper);
+                helpers.push(...includedHelpers);
+            }
+        );
 
         //Set helpers with function
-        config.helpers = helpers.concat();
+        config.helpers = helpers;
     }
 
     return config;
 };
 
-// class _Config {
-//     templates;
-//     exposedHelpers = {};
-//     currentTemplate;
-//     currentVariables;
+/**
+ * Load the configuration
+ * @param path Config path
+ */
+const loadConfig = async (path: string): Promise<Config> => {
+    //Check if exists
+    if (!fs.existsSync(path)) {
+        throw new ConfigNotFoundError(
+            `The configuration does not exist at '${path}'`
+        );
+    }
 
-//     // async askForTemplate() {
-//     //     if (this.templates.length === 1) {
-//     //         this.currentTemplate = this.templates[0];
-//     //         return;
-//     //     }
+    //Load it
+    try {
+        const content = await fs.promises.readFile(CONFIG_PATH, {
+            encoding: "utf-8",
+        });
+        return JSON.parse(content) as Config;
+    } catch {
+        throw new ConfigValidationError();
+    }
+};
 
-//     //     const { name } = await ask({
-//     //         name: {
-//     //             message: "What do you want to generate ?",
-//     //             type: "choices",
-//     //             choices: this.templates.map((template) => template.name),
-//     //         },
-//     //     });
+/**
+ * Merge configurations
+ * @param globalConfig Global configuration
+ * @param localConfig Local configuration
+ */
+const mergeConfigurationsAsync = async (
+    globalConfig: Config,
+    localConfig: Config
+): Promise<Config> => {
+    let result: Config = {
+        ...globalConfig,
+    };
 
-//     //     this.currentTemplate = this.templates.find(
-//     //         (template) => template.name === name
-//     //     );
+    //Templates
+    if (localConfig.templates) {
+        if (!result.templates) {
+            result.templates = localConfig.templates;
+        } else {
+            localConfig.templates.forEach((template) => {
+                const index = result.templates?.findIndex(
+                    (x) => x.name.toUpperCase() === template.name.toUpperCase()
+                );
+                //Replace or add the template
+                if (index && index >= 0) {
+                    result.templates?.splice(index, 1, template);
+                } else {
+                    result.templates?.push(template);
+                }
+            });
+        }
+    }
 
-//     //     if (this.currentTemplate.files.length < 1) {
-//     //         throw new ConfigValidationError(
-//     //             "Add at least one file to your template"
-//     //         );
-//     //     }
-//     // }
+    //Helpers
+    if (localConfig.helpers) {
+        if (!result.helpers) {
+            result.helpers = localConfig.helpers;
+        } else {
+            localConfig.helpers.forEach((template) => {
+                const index = result.helpers?.findIndex(
+                    (x) => x.name.toUpperCase() === template.name.toUpperCase()
+                );
+                //Replace or add the template
+                if (index && index >= 0) {
+                    result.helpers?.splice(index, 1, template);
+                } else {
+                    result.helpers?.push(template);
+                }
+            });
+        }
+    }
 
-//     async askForVariables() {
-//         const { variables } = this.currentTemplate;
-//         this.currentVariables = await ask(variables);
-//     }
-
-//     fetchConfig() {
-//         if (this.templates !== undefined) return;
-
-//         if (!fs.existsSync(CONFIG_PATH)) throw new ConfigNotFoundError();
-
-//         let configContent;
-//         try {
-//             configContent = fs.readFileSync(CONFIG_PATH).toString();
-//             configContent = JSON.parse(configContent);
-//         } catch {
-//             throw new ConfigValidationError(
-//                 "Make sure the configuration file is in the JSON format"
-//             );
-//         }
-//         if (configContent.templates === undefined)
-//             throw new ConfigValidationError(
-//                 "Make sure the configuration file has the key templates"
-//             );
-//         if (
-//             configContent.templates.length === undefined ||
-//             typeof configContent.templates !== "object"
-//         ) {
-//             throw new ConfigValidationError(
-//                 "Make sure the key templates is an array"
-//             );
-//         }
-//         if (configContent.templates.length < 1) {
-//             throw new ConfigValidationError(
-//                 "Add templates to the configuration file"
-//             );
-//         }
-//         for (const template of configContent.templates) {
-//             if (template.name === undefined || template.files === undefined) {
-//                 throw new ConfigValidationError(
-//                     "Make sure templates have all the keys name and files"
-//                 );
-//             }
-//             if (
-//                 template.files.length === undefined ||
-//                 typeof template.files !== "object"
-//             ) {
-//                 throw new ConfigValidationError(
-//                     "Make sure templates have all the key files of type array"
-//                 );
-//             }
-//             for (const file of template.files) {
-//                 if (
-//                     (!file.path && !template.path) ||
-//                     !file.name ||
-//                     !file.template
-//                 ) {
-//                     throw new ConfigValidationError(
-//                         "Make sure files have all the keys path name and template"
-//                     );
-//                 }
-//                 file.path = file.path || template.path;
-//             }
-//             if (!template.variables) {
-//                 template.variables = {};
-//             }
-//         }
-
-//         if (configContent.helpers) {
-//             Object.keys(configContent.helpers).forEach((helperName) => {
-//                 let helperPath;
-//                 try {
-//                     helperPath = fs.realpathSync(
-//                         `${CRAFTSMAN_FOLDER}/${configContent.helpers[helperName]}.js`
-//                     );
-//                 } catch {
-//                     throw new ConfigValidationError(
-//                         `helper ${helperName} helper not found`
-//                     );
-//                 }
-
-//                 const helper = require(helperPath);
-//                 if (typeof helper !== "function") {
-//                     throw new ConfigValidationError(
-//                         `Make sure the ${helperName} helper is a function`
-//                     );
-//                 }
-//                 this.exposedHelpers[helperName] = helper;
-//             });
-//         }
-
-//         this.templates = configContent.templates;
-//     }
-// }
+    return result;
+};
