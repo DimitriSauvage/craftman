@@ -1,27 +1,29 @@
 import ejs from "ejs";
 import TemplateParserError from "../../Errors/TemplateParserError";
-import { Question } from "../../Models/Question";
-import Variable from "../../Models/Variable";
+import { Question } from "../../Models/internal/Question";
 import { getQuestionAsync } from "../QuestionManager";
 import { conditionRespectedAsync } from "./ConditionUtils";
 import { safePromptAsync } from "./PromptUtils";
+import Variable from "../../Models/public/Variable";
 
 /**
- * Apply variables to a string
- * @param {object} variables
- * @param {string} content
- * @param {string} scope
+ * Apply variables in a content
+ * @param variables Variables to use for the replacement
+ * @param content Content where apply variables
+ * @param scope Where the treatment is happened
+ * @param renderType Render type
  */
 export const applyVariablesAsync = (
     variables: Variable[],
     content: string,
     scope: string,
-    renderType: "ejs" | "replacement"
+    renderType: "ejs" | "replacement" | "both"
 ): Promise<string> => {
     return new Promise((resolve) => {
         let result = "";
-        //Create data object
-        if (renderType === "ejs") {
+
+        //Apply EJS
+        if (renderType === "ejs" || renderType === "both") {
             try {
                 const data: ejs.Data = {};
                 variables.forEach((x) => {
@@ -32,7 +34,13 @@ export const applyVariablesAsync = (
             } catch (e) {
                 throw new TemplateParserError(scope, e.message);
             }
-        } else if (renderType === "replacement") {
+        }
+
+        //Apply replacement
+        if (
+            (renderType === "replacement" || renderType === "both") &&
+            variables.length > 0
+        ) {
             //Replace with variables values
             variables.forEach((variable) => {
                 result = content.replace(variable.name, variable.value);

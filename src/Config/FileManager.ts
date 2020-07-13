@@ -1,18 +1,20 @@
 import ConfigValidationError from "../Errors/ConfigValidationError";
-import File from "../Models/File";
+import File from "../Models/public/File";
 
 /**
  * Validate a file and return it with validation modifications
  * @param fileToValidate File to validate
  */
-export const validateFileAsync = async (fileToValidate: File): Promise<File> => {
+export const validateFileAsync = async (
+    fileToValidate: File
+): Promise<File> => {
     //Copy of the file
     const file: File = {
         ...fileToValidate,
     };
 
     //Check values
-    if (!file.name || !file.template) {
+    if (!file.name || !file.model) {
         throw new ConfigValidationError(
             "Make sure all files have name and template properties."
         );

@@ -1,0 +1,2 @@
+- FIchie de configuration global (/home/$USER)
+- Fichier de configuration local

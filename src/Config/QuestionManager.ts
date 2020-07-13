@@ -1,14 +1,6 @@
-import { Question, QuestionChoice } from "../Models/Question";
-import Variable from "../Models/Variable";
+import { Question, QuestionChoice } from "../Models/internal/Question";
 import { safePromptAsync } from "./Utils/PromptUtils";
-
-// export interface QuestionConfig {
-//     name: string;
-//     message: string;
-//     type: QuestionType;
-//     choices?: string[];
-//     source?: (_: any, search: string) => Promise<string[]>;
-// }
+import Variable from "../Models/public/Variable";
 
 /**
  * Get default config of a question
@@ -29,7 +21,9 @@ const getDefaultQuestion = async (variable: Variable): Promise<Question> =>
  * Get the config for a variable question
  * @param variable Variable for which get the config
  */
-export const getQuestionAsync = async (variable: Variable): Promise<Question> => {
+export const getQuestionAsync = async (
+    variable: Variable
+): Promise<Question> => {
     let config: Question = await getDefaultQuestion(variable);
 
     switch (variable.type) {

@@ -3,15 +3,16 @@ import clear from "clear";
 import figlet from "figlet";
 import handleError from "./Errors/errorHandler";
 import { getConfigAsync } from "./Config/ConfigManager";
-import Config from "./Models/Config";
+import Config from "./Models/public/Config";
 import { getTemplateToUseAsync } from "./Config/TemplateManager";
 import {
     getVariableValuesAsync,
     applyVariablesAsync,
 } from "./Config/Utils/VariableUtils";
 import { conditionRespectedAsync } from "./Config/Utils/ConditionUtils";
+import { generateFileAsync } from "./Generator";
 
-const craftsmanExecutionAsync = async (): Promise<void> => {
+export const craftsmanExecutionAsync = async (): Promise<void> => {
     try {
         //Clear the console when starting Craftsman
         clear();
@@ -50,8 +51,9 @@ const craftsmanExecutionAsync = async (): Promise<void> => {
             }
             //Check if the condition are checked
             if (canGenerate) {
-                await generateFile(
-                    file.template,
+                await generateFileAsync(template, file)
+                await generateFileAsync(
+                    file.model,
                     file.path,
                     file.name,
                     file.replaceExistingFile,

@@ -1,5 +1,5 @@
 import prompts from "prompts";
-import { Question } from "../../Models/Question";
+import { Question } from "../../Models/internal/Question";
 
 /**
  * Ask a question with the availability to cancel

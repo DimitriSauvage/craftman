@@ -1,9 +1,9 @@
-import { Template } from "../Models/Template";
 import ConfigValidationError from "../Errors/ConfigValidationError";
-import File from "../Models/File";
+import { QuestionChoice } from "../Models/internal/Question";
 import { validateFileAsync } from "./FileManager";
 import { askQuestionAsync } from "./QuestionManager";
-import { QuestionChoice } from "../Models/Question";
+import { Template } from "../Models/public/Template";
+import File from "../Models/public/File";
 
 /**
  * Validate a template

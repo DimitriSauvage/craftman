@@ -1,17 +1,13 @@
 import fs from "fs";
 import { CONFIG_PATH, CRAFTSMAN_FOLDER } from "../constants";
-import Config from "../Models/Config";
 import ConfigNotFoundError from "../Errors/ConfigNotFoundError";
 import ConfigValidationError from "../Errors/ConfigValidationError";
-import { type } from "os";
-import HelperDefinition, {
-    HelperShortcutDeclaration,
-    HelperLongDeclaration,
-    HelperFunction,
-} from "../Models/Helper";
-import { Template } from "../Models/Template";
-import { validateTemplateAsync } from "./TemplateManager";
+import Config from "../Models/public/Config";
 import { includedHelpers } from "./includedHelpers";
+import { validateTemplateAsync } from "./TemplateManager";
+import { Template } from "../Models/public/Template";
+import HelperDefinition, { HelperLongDeclaration, HelperFunction, HelperShortcutDeclaration } from "../Models/public/Helper";
+
 const ask = require("./ask").default;
 
 /**Authorized helper extension */

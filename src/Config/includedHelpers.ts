@@ -1,9 +1,8 @@
+import { HelperFunction } from "../Models/public/Helper";
+
 /**
  * Available helpers
  */
-
-import { HelperFunction } from "../Models/Helper";
-
 export const includedHelpers: HelperFunction[] = [
     {
         name: "capitalize",

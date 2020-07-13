@@ -1,1 +1,2 @@
-module.exports = require("./Generator.ts");
+import { generateFileAsync } from "./Generator";
+export { generateFileAsync };

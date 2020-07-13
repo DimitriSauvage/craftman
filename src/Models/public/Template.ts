@@ -15,7 +15,7 @@ export interface Template {
     files: File[];
     /**
      * Path where the files will be created.
-     * If not provided, the root folder will be used
+     * If not provided, the current folder will be used
      */
     path?: string;
     /**

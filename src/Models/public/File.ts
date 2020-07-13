@@ -15,15 +15,15 @@ export default interface File {
      */
     name: string;
     /**
-     * Template file name, without extension
+     * Model file name
      */
-    template: string;
+    model: string;
     /**
      * If the CLI should replace the file or not if it already exists, by default this parameter by default this parameter is set to "ask"
      */
     replaceExistingFile?: ReplaceExistingFileEnum;
     /**
-     * To condition to met to generate the file
+     * Condition to met to generate the file
      */
     condition?: string;
 }
